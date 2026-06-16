@@ -54,6 +54,6 @@ Project Presentation Video (Loom) : https://www.loom.com/share/53b2bae616b544288
 📬 Contact
 I am a Data Analyst transitioning from a background in Science Education, passionate about turning complex data into actionable business stories.
 
-LinkedIn: linkedin.com/in/beyza-melike
+LinkedIn: www.linkedin.com/in/beyza-melike
 
 Email: beyzamelikem@outlook.com
