@@ -1,0 +1,56 @@
+WITH session_events AS (
+  SELECT
+    CONCAT(user_pseudo_id, '-', CAST((SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'ga_session_id') AS STRING)) AS unique_session_id,
+    event_name,
+    TIMESTAMP_MICROS(event_timestamp) AS event_time,
+    
+    -- Açılış sayfası (Landing Page) için sayfa URL'si:
+    (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'page_location') AS page_location,
+    
+    -- Satış geliri (Revenue) verisi
+    ecommerce.purchase_revenue AS revenue,
+
+    -- Filtre boyutları
+    device.category AS device_category,
+    device.language AS device_language,
+    device.operating_system AS os,
+    traffic_source.source AS source,
+    traffic_source.medium AS medium,
+    traffic_source.name AS campaign
+  FROM
+    `bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*`
+  WHERE 
+    _TABLE_SUFFIX BETWEEN '20201101' AND '20210131'
+),
+
+funnel_steps AS (
+  SELECT
+    unique_session_id,
+    MIN(event_time) AS session_start_time, 
+    MAX(IF(event_name = 'session_start', page_location, NULL)) AS landing_page,
+
+    -- Satın alma işlemlerinden elde edilen toplam gelir hesabı
+    SUM(IFNULL(revenue, 0)) AS total_revenue,
+    MAX(device_category) AS device_category,
+    MAX(device_language) AS device_language,
+    MAX(os) AS os,
+    MAX(source) AS source,
+    MAX(medium) AS medium,
+    MAX(campaign) AS campaign,
+    
+    -- Huni Adımları
+    MAX(IF(event_name = 'session_start', 1, 0)) AS step_1_session_start,
+    MAX(IF(event_name = 'view_item', 1, 0)) AS step_2_view_item,
+    MAX(IF(event_name = 'add_to_cart', 1, 0)) AS step_3_add_to_cart,
+    MAX(IF(event_name = 'begin_checkout', 1, 0)) AS step_4_begin_checkout,
+    MAX(IF(event_name = 'add_shipping_info', 1, 0)) AS step_5_add_shipping_info,
+    MAX(IF(event_name = 'add_payment_info', 1, 0)) AS step_6_add_payment_info,
+    MAX(IF(event_name = 'purchase', 1, 0)) AS step_7_purchase
+
+  FROM
+    session_events
+  GROUP BY
+    unique_session_id
+)
+
+SELECT * FROM funnel_steps;
